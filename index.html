@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gyógyszer Hatástani Csoport Párosító</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .game-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .drug-display {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e8f4f8;
+            border-radius: 5px;
+        }
+        .level-container {
+            margin-bottom: 15px;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        select:disabled {
+            background-color: #f5f5f5;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .feedback {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .correct {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .score-display {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gyógyszer Hatástani Csoport Párosító</h1>
+    <div class="game-container">
+        <div class="score-display">
+            Pontszám: <span id="score">0</span> / <span id="total">0</span>
+        </div>
+        <div class="drug-display" id="current-drug"></div>
+        
+        <div class="level-container">
+            <label for="level1">1. szint (Fő hatástani csoport):</label>
+            <select id="level1" disabled>
+                <option value="">Válassz fő hatástani csoportot...</option>
+            </select>
+        </div>
+        
+        <div class="level-container">
+            <label for="level2">2. szint (Alcsoport):</label>
+            <select id="level2" disabled>
+                <option value="">Válassz alcsoportot...</option>
+            </select>
+        </div>
+        
+        <div class="level-container">
+            <label for="level3">3. szint (Részletes csoport):</label>
+            <select id="level3" disabled>
+                <option value="">Válassz részletes csoportot...</option>
+            </select>
+        </div>
+        
+        <button id="check-button" disabled>Ellenőrzés</button>
+        <button id="next-button" style="display: none;">Következő gyógyszer</button>
+        
+        <div id="feedback" class="feedback" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Gyógyszer adatbázis
+        const drugDatabase = {
+            // Kolinerg transzmisszióra ható szerek
+            "ACETIL-KOLIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "DIREKT KOLINERG IZGATÓK – M-agonisták", "Kolin észterek"],
+            "METHACHOLIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "DIREKT KOLINERG IZGATÓK – M-agonisták", "Kolin észterek"],
+            "CARBACHOL": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "DIREKT KOLINERG IZGATÓK – M-agonisták", "Kolin észterek"],
+            "BETHANECHOL": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "DIREKT KOLINERG IZGATÓK – M-agonisták", "Kolin észterek"],
+            "PILOCARPIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "DIREKT KOLINERG IZGATÓK – M-agonisták", "Alkaloidok"],
+            "MUSZKARIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "DIREKT KOLINERG IZGATÓK – M-agonisták", "Alkaloidok"],
+            "EDROPHONIUM": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "INDIREKT KOLINERG IZGATÓK – kolinészteráz gátlók", "Reverzibilisen kötődők"],
+            "PHYSOSTIGMIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "INDIREKT KOLINERG IZGATÓK – kolinészteráz gátlók", "Pszeudoireverzibilisen kötődők – karbamátok"],
+            "NEOSTIGMIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "INDIREKT KOLINERG IZGATÓK – kolinészteráz gátlók", "Pszeudoireverzibilisen kötődők – karbamátok"],
+            "PYRIDOSTIGMIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "INDIREKT KOLINERG IZGATÓK – kolinészteráz gátlók", "Pszeudoireverzibilisen kötődők – karbamátok"],
+            "ECOTHIOPAT": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "INDIREKT KOLINERG IZGATÓK – kolinészteráz gátlók", "Irreverzibilisen kötődők – foszfátészterek"],
+            "DONEPEZIL": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "INDIREKT KOLINERG IZGATÓK – kolinészteráz gátlók", "CNS specifikus szerek"],
+            "RIVASTIGMIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "INDIREKT KOLINERG IZGATÓK – kolinészteráz gátlók", "CNS specifikus szerek"],
+            "PRALIDOXIM": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "INDIREKT KOLINERG IZGATÓK – kolinészteráz gátlók", "Enzim reaktiválók"],
+            "ATROPIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Nem szelektív tercier vegyületek"],
+            "SCOPOLAMIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Nem szelektív tercier vegyületek"],
+            "METHYLHOMATROPIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Nem szelektív kvaterner vegyületek"],
+            "BUTYLSCOPOLAMIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Nem szelektív kvaterner vegyületek"],
+            "IPRATROPIUM": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Nem szelektív kvaterner vegyületek"],
+            "TIOTROPIUM": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Nem szelektív kvaterner vegyületek"],
+            "BIPERIDEN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "CNS szelektív szerek"],
+            "PROCYCLIDIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "CNS szelektív szerek"],
+            "CYCLOPENTOLAT": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Szemészeti szerek"],
+            "TROPICAMID": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Szemészeti szerek"],
+            "OXYBUTYNIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Urológiai szerek"],
+            "TROSPIUM": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Urológiai szerek"],
+            "DARIFENACIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Urológiai szerek"],
+            "SOLIFENACIN": ["KOLINERG TRANSZMISSZIÓRA HATÓ SZEREK", "KOLINERG BÉNÍTÓK – M-antagonisták", "Urológiai szerek"],
+            
+            // Harántcsíkolt izmokra ható szerek
+            "D–TUBOCURARIN": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "NEM DEPOLARIZÁLÓ IZOMRELAXÁNSOK – N-antagonisták", "Tartós hatású szerek"],
+            "PIPECURONIUM": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "NEM DEPOLARIZÁLÓ IZOMRELAXÁNSOK – N-antagonisták", "Tartós hatású szerek"],
+            "ROCURONIUM": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "NEM DEPOLARIZÁLÓ IZOMRELAXÁNSOK – N-antagonisták", "Közepes hatástartamú szerek"],
+            "MIVACURIUM": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "NEM DEPOLARIZÁLÓ IZOMRELAXÁNSOK – N-antagonisták", "Rövid hatástartamú szerek"],
+            "ATRACURIUM": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "NEM DEPOLARIZÁLÓ IZOMRELAXÁNSOK – N-antagonisták", "Rövid hatástartamú szerek"],
+            "CISATRACURIUM": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "NEM DEPOLARIZÁLÓ IZOMRELAXÁNSOK – N-antagonisták", "Rövid hatástartamú szerek"],
+            "SUXAMETHONIUM": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "DEPOLARIZÁLÓ IZOMRELAXÁNS", ""],
+            "DANTROLEN": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "SZARKOPLAZMATIKUS CA²+-FELSZABADULÁS GÁTLÓ", ""],
+            "BOTULINUM TOXIN": ["HARÁNTCSÍKOLT IZMOKRA HATÓ SZEREK", "ACH FELSZABADULÁS GÁTLÓ", ""],
+            
+            // Adrenerg transzmisszióra ható szerek
+            "Noradrenalin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Endogén katecholaminok"],
+            "Adrenalin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Endogén katecholaminok"],
+            "Xylometazolin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Nem szelektív α-agonisták – nazális dekongesztánsok"],
+            "Oxymetazolin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Nem szelektív α-agonisták – nazális dekongesztánsok"],
+            "Tetryzolin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Nem szelektív α-agonisták – nazális dekongesztánsok"],
+            "Tramazolin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Nem szelektív α-agonisták – nazális dekongesztánsok"],
+            "Phenylephrin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív α1-agonista"],
+            "Midodrin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív α1-agonista"],
+            "Clonidin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív α2-agonista"],
+            "Guanfacin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív α2-agonista"],
+            "Methyldopa": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív α2-agonista"],
+            "Moxonidin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív α2-agonista"],
+            "Rilmenidin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív α2-agonista"],
+            "Isoprenalin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Nem szelektív β-agonista"],
+            "Dopamin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív β1-agonisták"],
+            "Dobutamin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív β1-agonisták"],
+            "Salbutamol": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív β2-agonisták"],
+            "Terbutalin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív β2-agonisták"],
+            "Salmeterol": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív β2-agonisták"],
+            "Formoterol": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív β2-agonisták"],
+            "Indacaterol": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív β2-agonisták"],
+            "Mirabegron": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Szelektív β3-agonista"],
+            "MethAmphiermin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Indirekt adrenerg izgatók"],
+            "NorEphedrin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Indirekt adrenerg izgatók"],
+            "PseudoEphedrin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Indirekt adrenerg izgatók"],
+            "Oxedrin": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG IZGATÓK", "Indirekt adrenerg izgatók"],
+            
+            // Adrenerg bénítók
+            "PHENOXYBENZAMIN": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Nem szelektív α-antagonisták"],
+            "PHENTOLAMIN": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Nem szelektív α-antagonisták"],
+            "DOXAZOSIN": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Szelektív α1-antagonisták"],
+            "ALFUZOSIN": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Szelektív α1-antagonisták"],
+            "TAMSULOSIN": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Szelektív α1-antagonisták"],
+            "YOHIMBIN": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Szelektív α2-antagonista"],
+            "PROPRANOLOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Nem szelektív β-antagonisták"],
+            "TIMOLOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Nem szelektív β-antagonisták"],
+            "METOPROLOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Kardioszelektív β1-blokkolók"],
+            "ATENOLOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Kardioszelektív β1-blokkolók"],
+            "BETAXOLOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Kardioszelektív β1-blokkolók"],
+            "BISOPROLOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Kardioszelektív β1-blokkolók"],
+            "ESMOLOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Kardioszelektív β1-blokkolók"],
+            "NEBIVOLOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "Kardioszelektív β1-blokkolók"],
+            "CARVEDILOL": ["ADRENERG TRANSZMISSZIÓRA HATÓ SZEREK", "ADRENERG BÉNÍTÓK", "α/β-antagonisták"],
+            
+            // Glaucoma gyógyszerei
+            "BRIMONDIN": ["A GLAUCOMA GYÓGYSZEREI", "α2-RECEPTOR AGONISTÁK", ""],
+            "PILOCARPIN": ["A GLAUCOMA GYÓGYSZEREI", "PARASZIMPATOMIMETIKUMOK", ""],
+            "CARBACHOL": ["A GLAUCOMA GYÓGYSZEREI", "PARASZIMPATOMIMETIKUMOK", ""],
+            "ECOTHIOPAT": ["A GLAUCOMA GYÓGYSZEREI", "PARASZIMPATOMIMETIKUMOK", ""],
+            "TIMOLOL": ["A GLAUCOMA GYÓGYSZEREI", "β-BLOKKOLÓK", ""],
+            "BETAXOLOL": ["A GLAUCOMA GYÓGYSZEREI", "β-BLOKKOLÓK", ""],
+            "ACETAZOLAMID": ["A GLAUCOMA GYÓGYSZEREI", "KARBOANHIDRÁZ-GÁTLÓK", ""],
+            "DORZOLAMID": ["A GLAUCOMA GYÓGYSZEREI", "KARBOANHIDRÁZ-GÁTLÓK", ""],
+            "BRINZOLAMID": ["A GLAUCOMA GYÓGYSZEREI", "KARBOANHIDRÁZ-GÁTLÓK", ""],
+            "LATANOPROST": ["A GLAUCOMA GYÓGYSZEREI", "PROSZTAGLANDIN-F2α -ANALÓGOK", ""],
+            "TRAVOPROST": ["A GLAUCOMA GYÓGYSZEREI", "PROSZTAGLANDIN-F2α -ANALÓGOK", ""],
+            
+            // Szívre ható szerek
+            "QUINIDIN": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "I. osztály – Na⁺ csatorna gátlók"],
+            "LIDOCAIN": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "I. osztály – Na⁺ csatorna gátlók"],
+            "MEXILETIN": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "I. osztály – Na⁺ csatorna gátlók"],
+            "PROPAFENON": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "I. osztály – Na⁺ csatorna gátlók"],
+            "PROPRANOLOL": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "II. osztály – antiadrenerg szerek (β-blokkolók)"],
+            "METOPROLOL": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "II. osztály – antiadrenerg szerek (β-blokkolók)"],
+            "ATENOLOL": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "II. osztály – antiadrenerg szerek (β-blokkolók)"],
+            "ESMOLOL": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "II. osztály – antiadrenerg szerek (β-blokkolók)"],
+            "SOTALOL": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "III. osztály – repolarizációt gátló szerek"],
+            "AMIODARON": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "III. osztály – repolarizációt gátló szerek"],
+            "VERAPAMIL": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "IV. osztály – kardiális hatású Ca²⁺ antagonisták"],
+            "DILTIAZEM": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "IV. osztály – kardiális hatású Ca²⁺ antagonisták"],
+            "ADENOSIN": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "Csoportba nem sorolt szerek"],
+            "DIGOXIN": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "Csoportba nem sorolt szerek"],
+            "DIGITOXIN": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "Csoportba nem sorolt szerek"],
+            "MAGNESIUM": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "Csoportba nem sorolt szerek"],
+            "ATROPIN": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "Csoportba nem sorolt szerek"],
+            "ADRENALIN": ["SZÍVRE HATÓ SZEREK", "ANTIARRHYTHMIÁS SZEREK", "Csoportba nem sorolt szerek"],
+            "DOPAMIN": ["SZÍVRE HATÓ SZEREK", "POZITÍV INOTRÓP SZEREK", "β₁-agonisták"],
+            "DOBUTAMIN": ["SZÍVRE HATÓ SZEREK", "POZITÍV INOTRÓP SZEREK", "β₁-agonisták"],
+            "MILIRINON": ["SZÍVRE HATÓ SZEREK", "POZITÍV INOTRÓP SZEREK", "PDE-III gátlók"],
+            "LEVOSIMENDAN": ["SZÍVRE HATÓ SZEREK", "POZITÍV INOTRÓP SZEREK", "Kalcium-érzékenyítő"],
+            "IVABRADIN": ["SZÍVRE HATÓ SZEREK", "EGYÉB SZÍVRE HATÓ SZEREK", "funny áram gátló"],
+            "RANOLAZIN": ["SZÍVRE HATÓ SZEREK", "EGYÉB SZÍVRE HATÓ SZEREK", "késői Na⁺-csatorna gátló"],
+            "TRIMETAZIDIN": ["SZÍVRE HATÓ SZEREK", "EGYÉB SZÍVRE HATÓ SZEREK", "3-ketoacil-CoA-tioláz gátló"],
+            
+            // Keringésre ható szerek
+            "Doxazosin": ["KERINGÉSRE HATÓ SZEREK", "ANTIADRENERG SZEREK", "Szelektív α1-antagonisták"],
+            "METOPROLOL": ["KERINGÉSRE HATÓ SZEREK", "ANTIADRENERG SZEREK", "II. generációs, kardioszelektív β1-antagonisták"],
+            "ATENOLOL": ["KERINGÉSRE HATÓ SZEREK", "ANTIADRENERG SZEREK", "II. generációs, kardioszelektív β1-antagonisták"],
+            "BISOPROLOL": ["KERINGÉSRE HATÓ SZEREK", "ANTIADRENERG SZEREK", "II. generációs, kardioszelektív β1-antagonisták"],
+            "BETAXOLOL": ["KERINGÉSRE HATÓ SZEREK", "ANTIADRENERG SZEREK", "II. generációs, kardioszelektív β1-antagonisták"],
+            "CARVEDILOL": ["KERINGÉSRE HATÓ SZEREK", "ANTIADRENERG SZEREK", "III. generációs, értágító hatású β-antagonisták"],
+            "NEBIVOLOL": ["KERINGÉSRE HATÓ SZEREK", "ANTIADRENERG SZEREK", "III. generációs, értágító hatású β-antagonisták"],
+            "METHYLDOPA": ["KERINGÉSRE HATÓ SZEREK", "Centrális hatású szerek", "α2-agonisták"],
+            "MOXONIDIN": ["KERINGÉSRE HATÓ SZEREK", "Centrális hatású szerek", "l1-agonisták"],
+            "RILMENDIN": ["KERINGÉSRE HATÓ SZEREK", "Centrális hatású szerek", "l1-agonisták"],
+            "ALISKIREN": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "Renin gátlók"],
+            "CAPTOPRIL": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "ACE-gátlók"],
+            "ENALAPRIL": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "ACE-gátlók"],
+            "LISINOPRIL": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "ACE-gátlók"],
+            "PERINDOPRIL": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "ACE-gátlók"],
+            "RAMIPRIL": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "ACE-gátlók"],
+            "FOSINOPRIL": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "ACE-gátlók"],
+            "LOSARTAN": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "AT-1 antagonisták"],
+            "VALSARTAN": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "AT-1 antagonisták"],
+            "IRBESARTAN": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "AT-1 antagonisták"],
+            "SPIRONOLACTON": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "Aldoszteron antagonisták"],
+            "EPLERENON": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "Aldoszteron antagonisták"],
+            "SACUBITRIL": ["KERINGÉSRE HATÓ SZEREK", "RENIN-ANGIOTENZIN RENDSZER (RAS) GÁTLÓK", "NEPRILIZIN GÁTLÓ"],
+            
+            // Direkt hatású értágítók
+            "VERAPAMIL": ["DIREKT HAT
